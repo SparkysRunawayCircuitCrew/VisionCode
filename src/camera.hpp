@@ -3,7 +3,7 @@
 #include <functional>
 #include <vector>
 
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 
 typedef std::function<cv::Mat(cv::Mat)> FilterFunc;
 

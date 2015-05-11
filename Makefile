@@ -1,6 +1,6 @@
 LANG:=C++
 OUTPUT:=vison
-LIBS:= -lopencv_core
+LIBS:= -lopencv_core -lopencv_imgproc -lopencv_video -lopencv_imgcodecs -lopencv_highgui
 FLAGS:= -g
 
 ifeq "$(LANG)" "C++"
