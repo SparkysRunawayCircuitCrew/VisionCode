@@ -4,7 +4,7 @@ LIBS:= -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui -lopen
 FLAGS:= -g
 
 ifeq "$(LANG)" "C++"
-       	EXT:=cpp
+  	EXT:=cpp
 	STD:=c++14
 	CC:=$(CXX)
 else ifeq "$(LANG)" "C"

@@ -5,18 +5,21 @@
 
 #include <opencv2/opencv.hpp>
 
-typedef std::function<cv::Mat(cv::Mat)> FilterFunc;
+typedef int FilterGroup;
+typedef std::function<void(cv::Mat&)> FilterFunc;
 
 struct Camera {
-	std::vector<FilterFunc> filters;
+    std::vector<std::vector<FilterFunc>> filters;
 	cv::VideoCapture videoCap;
 
 	cv::Mat rawFrame;
 	cv::Mat filteredFrame;
 	
 	Camera(int id = 0);
-	~Camera();
 
 	// Captures and processes an image frame
-	void capture();
+	void capture(FilterGroup group);
+
+    // Adds a filter to a specified filter group
+    void addFilter(FilterGroup group, FilterFunc filter);
 };
