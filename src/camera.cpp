@@ -6,12 +6,14 @@
 
 Camera::Camera(int id): videoCap(id) { }
 
-void Camera::capture(FilterGroup group) {
+void Camera::capture(std::vector<FilterGroup> groups) {
     this->videoCap >> this->rawFrame;
     this->filteredFrame = this->rawFrame;
 
-    for (auto& filter : this->filters[group]) {
-        filter(this->filteredFrame);
+    for (FilterGroup& group : groups) {
+        for (auto& filter : this->filters[group]) {
+            filter(this->filteredFrame);
+        }
     }
 }
 

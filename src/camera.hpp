@@ -18,7 +18,7 @@ struct Camera {
 	Camera(int id = 0);
 
 	// Captures and processes an image frame
-	void capture(FilterGroup group);
+	void capture(std::vector<FilterGroup> groups);
 
     // Adds a filter to a specified filter group
     void addFilter(FilterGroup group, FilterFunc filter);
