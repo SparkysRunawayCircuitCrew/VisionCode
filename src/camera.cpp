@@ -25,7 +25,7 @@ void Camera::captureCropped(std::vector<FilterGroup> groups) {
 
     cv::Rect toCrop(0, y / 2 - 10, x, y / 2 + 10);
     this->filteredFrame = this->filteredFrame(toCrop);
-    
+
     for (FilterGroup& group : groups) {
         for (auto& filter : this->filters[group]) {
             filter(this->filteredFrame);

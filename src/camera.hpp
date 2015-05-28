@@ -10,19 +10,19 @@ typedef std::function<void(cv::Mat&)> FilterFunc;
 
 struct Camera {
     std::vector<std::vector<FilterFunc>> filters;
-	cv::VideoCapture videoCap;
+    cv::VideoCapture videoCap;
 
-	cv::Mat rawFrame;
-	cv::Mat filteredFrame;
-	
-	Camera(int id = 0);
+    cv::Mat rawFrame;
+    cv::Mat filteredFrame;
 
-	// Captures and processes an image frame
-	void capture(std::vector<FilterGroup> groups);
+    Camera(int id = 0);
 
-  // Captures, crops, and processes an image frame
-  void captureCropped(std::vector<FilterGroup> groups);
-  
+    // Captures and processes an image frame
+    void capture(std::vector<FilterGroup> groups);
+
+    // Captures, crops, and processes an image frame
+    void captureCropped(std::vector<FilterGroup> groups);
+
     // Adds a filter to a specified filter group
     void addFilter(FilterGroup group, FilterFunc filter);
 };

@@ -29,7 +29,7 @@ std::vector<cv::Point>* largestContour(std::vector<std::vector<cv::Point>> conto
         if (boundingRect.area() > max_area) {
             largestContour = &contours[i];
         }
-    } 
+    }
 
     return largestContour;
 }
@@ -39,7 +39,7 @@ int main() {
     cv::namedWindow("test", 1);
     cv::setMouseCallback("test", mouseCallback, &cam.rawFrame);
 
-    cam.addFilter(Groups::Stanchion, [](cv::Mat& src) { 
+    cam.addFilter(Groups::Stanchion, [](cv::Mat& src) {
         cv::cvtColor(src, src, cv::COLOR_BGR2Luv);
     });
 
@@ -49,16 +49,16 @@ int main() {
 
     while(true) {
         cam.captureCropped({Groups::Stanchion});
-        
+
         std::vector<std::vector<cv::Point>> contours;
         std::vector<cv::Vec4i> hierarchy;
 
         cv::findContours(cam.filteredFrame, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
-        
+
         cv::Mat canvas = cv::Mat::zeros(cam.filteredFrame.size(), CV_8UC3);
 
         cv::imshow("test", canvas);
-        
+
         if (cv::waitKey(31) >= 0) {
             break;
         }
