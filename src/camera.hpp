@@ -20,6 +20,9 @@ struct Camera {
 	// Captures and processes an image frame
 	void capture(std::vector<FilterGroup> groups);
 
+  // Captures, crops, and processes an image frame
+  void captureCropped(std::vector<FilterGroup> groups);
+  
     // Adds a filter to a specified filter group
     void addFilter(FilterGroup group, FilterFunc filter);
 };
