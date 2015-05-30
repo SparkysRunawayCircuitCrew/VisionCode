@@ -18,13 +18,14 @@ void Camera::capture(std::vector<FilterGroup> groups) {
 
 void Camera::captureCropped(std::vector<FilterGroup> groups) {
     this->videoCap >> this->rawFrame;
-    this->filteredFrame = this->rawFrame;
 
-    int x = this->filteredFrame.cols;
-    int y = this->filteredFrame.rows;
+    int x = this->rawFrame.cols;
+    int y = this->rawFrame.rows;
 
     cv::Rect toCrop(0, y / 2 - 10, x, y / 2 + 10);
-    this->filteredFrame = this->filteredFrame(toCrop);
+    this->rawFrame = this->rawFrame(toCrop);
+
+    this->filteredFrame = this->rawFrame;
 
     for (FilterGroup& group : groups) {
         for (auto& filter : this->filters[group]) {
