@@ -5,7 +5,7 @@ FLAGS:= -g
 
 ifeq "$(LANG)" "C++"
   	EXT:=cpp
-	STD:=c++14
+	STD:=c++11
 	CC:=$(CXX)
 else ifeq "$(LANG)" "C"
 	EXT:=c
