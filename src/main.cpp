@@ -45,7 +45,7 @@ void drawBoundingRect(cv::Mat& frame, cv::Mat& canvas) {
     cv::findContours(frame, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, cv::Point(0, 0));
 
     cv::Rect boundingRect;
-    int idx = largestContour(contours, boundingRect); 
+    largestContour(contours, boundingRect); 
 
     cv::rectangle(canvas, boundingRect, cv::Scalar(0, 0, 255), 2);
 }
@@ -60,11 +60,15 @@ int main() {
     });
 
     cam.addFilter(Groups::Range, [](cv::Mat& src) {
-        cv::inRange(src, cv::Scalar(20, 90, 92), cv::Scalar(35, 150, 250), src);
+        cv::inRange(src, cv::Scalar(10, 130, 70), cv::Scalar(40, 230, 200), src);
     });
 
     while(true) {
-        cam.capture({Groups::Color, Groups::Range});
+        std::vector<FilterGroup> filters;
+        filters.push_back(Groups::Color);
+        filters.push_back(Groups::Range);
+
+        cam.capture(filters);
         
         drawBoundingRect(cam.filteredFrame, cam.rawFrame); 
         cv::imshow("test", cam.rawFrame);
