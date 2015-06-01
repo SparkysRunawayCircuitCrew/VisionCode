@@ -13,15 +13,19 @@ Camera::Camera(int id): videoCap(id) {
     this->height = test_frame.rows;
 }
 
-void Camera::capture(std::vector<FilterGroup> groups) {
-    this->capture_cropped(groups, cv::Rect(0, 0, this->width, this->height));
+void Camera::capture() {
+    this->capture({});
 }
 
-void Camera::capture_cropped(std::vector<FilterGroup> groups, cv::Rect crop_area) {
-    this->videoCap >> this->rawFrame;
-    this->rawFrame = this->rawFrame(crop_area);
+void Camera::capture(std::vector<FilterGroup> groups) {
+    this->captureCropped(groups, cv::Rect(0, 0, this->width, this->height));
+}
 
-    this->filteredFrame = this->rawFrame;
+void Camera::captureCropped(std::vector<FilterGroup> groups, cv::Rect cropArea) {
+    this->videoCap >> this->rawFrame;
+    this->rawFrame = this->rawFrame(cropArea);
+
+    this->filteredFrame = this->rawFrame.clone();
 
     for (FilterGroup& group : groups) {
         for (auto& filter : this->filters[group]) {
