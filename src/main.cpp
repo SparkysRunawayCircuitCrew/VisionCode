@@ -48,7 +48,7 @@ int main() {
     });
 
     while(true) {
-        cam.capture({Groups::Stanchion});
+        cam.capture_cropped({Groups::Stanchion}, cv::Rect(0, 0, 300, 300));
         
         std::vector<std::vector<cv::Point>> contours;
         std::vector<cv::Vec4i> hierarchy;
