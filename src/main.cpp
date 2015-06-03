@@ -2,6 +2,9 @@
 #include <iostream>
 
 #include "camera.hpp"
+#include "Timer.h"
+
+using namespace vision;
 
 enum Groups: FilterGroup {
     Color,
@@ -38,7 +41,7 @@ int largestContour(std::vector<std::vector<cv::Point>>& contours, cv::Rect& boun
     return max_contour;
 }
 
-void drawBoundingRect(cv::Mat& frame, cv::Mat& canvas) {
+cv::Rect boundingRect(cv::Mat& frame) {
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
 
@@ -47,35 +50,43 @@ void drawBoundingRect(cv::Mat& frame, cv::Mat& canvas) {
     cv::Rect boundingRect;
     largestContour(contours, boundingRect); 
 
-    cv::rectangle(canvas, boundingRect, cv::Scalar(0, 0, 255), 2);
+    return boundingRect;
 }
 
 int main() {
+    cv::Mat colorShift;
+    cv::Mat inRange;
+
     Camera cam;
     cv::namedWindow("test", 1);
-    cv::setMouseCallback("test", mouseCallback, &cam.filteredFrame);
+    cv::setMouseCallback("test", mouseCallback, &colorShift);
 
     cam.addFilter(Groups::Color, [](cv::Mat& src) { 
         cv::cvtColor(src, src, cv::COLOR_BGR2HSV);
     });
 
     cam.addFilter(Groups::Range, [](cv::Mat& src) {
-        cv::inRange(src, cv::Scalar(10, 130, 70), cv::Scalar(40, 230, 200), src);
+        cv::inRange(src, cv::Scalar(10, 125, 40), cv::Scalar(20, 210, 140), src);
     });
 
-    while(true) {
-        std::vector<FilterGroup> filters;
-        filters.push_back(Groups::Color);
-        filters.push_back(Groups::Range);
+    avc::Timer timer;
 
-        cam.capture(filters);
+    while(true) {
+        timer.start();
+
+        colorShift = cam.capture({Groups::Color}).clone();
+        inRange = cam.capture({Groups::Range}, false).clone();
         
-        drawBoundingRect(cam.filteredFrame, cam.rawFrame); 
+        cv::Rect bounding = boundingRect(inRange); 
+        cv::rectangle(cam.rawFrame, bounding, cv::Scalar(0, 0, 255), 2);
         cv::imshow("test", cam.rawFrame);
         
-        if (cv::waitKey(31) >= 0) {
+        if (cv::waitKey(33) >= 0) {
             break;
         }
+
+        float delta = timer.secsElapsed();
+        std::cout << "DT: " << delta << "\tFPS: " << (1.0 / delta) << "\n";
     }
 
     return 0;

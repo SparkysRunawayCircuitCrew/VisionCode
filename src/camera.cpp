@@ -4,34 +4,41 @@
 #include "camera.hpp"
 #include <opencv2/opencv.hpp>
 
+using namespace vision;
+
 // we assume each captured frame has the same resolution
 Camera::Camera(int id): videoCap(id) { 
-    cv::Mat test_frame;
-    this->videoCap >> test_frame;
+    this->videoCap >> this->rawFrame;
 
-    this->width = test_frame.cols;
-    this->height = test_frame.rows;
+    this->width = this->rawFrame.cols;
+    this->height = this->rawFrame.rows;
+
+    this->filteredFrame = this->rawFrame.clone();
 }
 
-void Camera::capture() {
-    this->capture({});
+cv::Mat& Camera::capture() {
+    return this->capture({});
 }
 
-void Camera::capture(std::vector<FilterGroup> groups) {
-    this->captureCropped(groups, cv::Rect(0, 0, this->width, this->height));
+cv::Mat& Camera::capture(std::vector<FilterGroup> groups, bool clearPreviousFilters) {
+    return this->captureCropped(groups, cv::Rect(0, 0, this->width, this->height), clearPreviousFilters);
 }
 
-void Camera::captureCropped(std::vector<FilterGroup> groups, cv::Rect cropArea) {
+cv::Mat& Camera::captureCropped(std::vector<FilterGroup> groups, cv::Rect cropArea, bool clearPreviousFilters) {
     this->videoCap >> this->rawFrame;
     this->rawFrame = this->rawFrame(cropArea);
 
-    this->filteredFrame = this->rawFrame.clone();
+    if (clearPreviousFilters) {
+        this->filteredFrame = this->rawFrame.clone();
+    }
 
     for (FilterGroup& group : groups) {
         for (auto& filter : this->filters[group]) {
             filter(this->filteredFrame);
         }
     }
+
+    return this->filteredFrame;
 }
 
 void Camera::addFilter(FilterGroup group, FilterFunc filter) {
