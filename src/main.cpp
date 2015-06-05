@@ -57,7 +57,17 @@ cv::Rect boundingRect(cv::Mat& frame) {
     return boundingRect;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    bool showScreen = false;
+
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        
+       if (arg == "--show") {
+            showScreen = true;
+       } 
+    }
+
     cv::Mat colorShift;
     cv::Mat inRange;
 
@@ -87,7 +97,10 @@ int main() {
         
         cv::Rect bounding = boundingRect(inRange); 
         cv::rectangle(cam.rawFrame, bounding, cv::Scalar(0, 0, 255), 2);
-        cv::imshow("test", cam.rawFrame);
+        
+        if (showScreen) {
+            cv::imshow("test", cam.rawFrame);
+        }
         
         if (cv::waitKey(33) >= 0) {
             break;
@@ -103,6 +116,9 @@ int main() {
 
     std::cout << color::Modifier(color::FG_DEFAULT) 
               << "\n" << "Average DT: " << (totalDT / frameCount) << "\tAverage FPS: " << (totalFPS / frameCount) << "\n";
+
+    cv::imwrite("colorShift.png", colorShift);
+    cv::imwrite("inRange.png", inRange);
 
     return 0;
 }
