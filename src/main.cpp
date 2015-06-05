@@ -3,6 +3,7 @@
 
 #include "camera.hpp"
 #include "Timer.h"
+#include "color.hpp"
 
 using namespace vision;
 
@@ -71,6 +72,10 @@ int main() {
 
     avc::Timer timer;
 
+    float totalDT = 0;
+    float totalFPS = 0;
+    int frameCount = 0;
+
     while(true) {
         timer.start();
 
@@ -86,8 +91,18 @@ int main() {
         }
 
         float delta = timer.secsElapsed();
-        std::cout << "DT: " << delta << "\tFPS: " << (1.0 / delta) << "\n";
+        float fps = 1.0 / delta;
+
+        totalDT += delta;
+        totalFPS += fps;
+        frameCount++;
+
+        color::Modifier col( (fps < 7) ? color::FG_RED : color::FG_GREEN);
+        std::cout << col << "DT: " << delta << "\tFPS: " << fps << "\n";
     }
+
+    std::cout << color::Modifier(color::FG_DEFAULT) 
+              << "\n" << "Average DT: " << (totalDT / frameCount) << "\tAverage FPS: " << (totalFPS / frameCount) << "\n";
 
     return 0;
 }
