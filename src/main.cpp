@@ -18,7 +18,10 @@ void mouseCallback(int event, int x, int y, int flags, void* data) {
     }
 
     cv::Mat* image = reinterpret_cast<cv::Mat*>(data);
-    std::cout << x << "\t" << y << ", " << image->at<cv::Vec3b>(cv::Point(x, y)) << "\n";
+    cv::Vec3b color = image->at<cv::Vec3b>(cv::Point(x, y));
+
+    std::cout << "(" << x << ", " << y << ")\n";
+    std::cout << "B: " << (int)color.val[0] << " G: " << (int)color.val[1] << " B: " << (int)color.val[2] << "\n\n";
 }
 
 int largestContour(std::vector<std::vector<cv::Point>>& contours, cv::Rect& boundingRect) {
@@ -96,9 +99,6 @@ int main() {
         totalDT += delta;
         totalFPS += fps;
         frameCount++;
-
-        color::Modifier col( (fps < 7) ? color::FG_RED : color::FG_GREEN);
-        std::cout << col << "DT: " << delta << "\tFPS: " << fps << "\n";
     }
 
     std::cout << color::Modifier(color::FG_DEFAULT) 
