@@ -10,8 +10,11 @@ using namespace vision;
 Camera::Camera(int id): videoCap(id) { 
     this->videoCap >> this->rawFrame;
 
-    this->width = this->rawFrame.cols;
-    this->height = this->rawFrame.rows;
+    this->videoCap.set(CV_CAP_PROP_FRAME_WIDTH, 320);
+    this->videoCap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+
+    this->width = 320;
+    this->height = 240;
 
     this->filteredFrame = this->rawFrame.clone();
 }

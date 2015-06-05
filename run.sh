@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-make && ./vison
+make && ./vision
