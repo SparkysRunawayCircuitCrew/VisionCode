@@ -117,8 +117,8 @@ int main(int argc, char* argv[]) {
     std::cout << color::Modifier(color::FG_DEFAULT) 
               << "\n" << "Average DT: " << (totalDT / frameCount) << "\tAverage FPS: " << (totalFPS / frameCount) << "\n";
 
-    cv::imwrite("colorShift.png", colorShift);
-    cv::imwrite("inRange.png", inRange);
+    cv::imwrite("output/colorShift.png", colorShift);
+    cv::imwrite("output/inRange.png", inRange);
 
     return 0;
 }

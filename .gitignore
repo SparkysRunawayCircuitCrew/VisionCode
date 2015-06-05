@@ -1,4 +1,5 @@
 obj
+output
 
 # Compiled Object files
 *.slo
@@ -23,8 +24,3 @@ obj
 *.la
 *.a
 *.lib
-
-# Executables
-*.exe
-*.out
-*.app
