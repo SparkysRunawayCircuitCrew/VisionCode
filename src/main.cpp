@@ -112,15 +112,15 @@ int main(int argc, char* argv[]) {
 
     cv::setMouseCallback(COLOR_SHIFT_WINDOW, mouseCallback, &colorShift);
 
-    int redXLow, redXHigh = 0;
-    int redYLow, redYHigh = 0;
-    int redZLow, redZHigh = 0;
+    int redXLow = 0, redXHigh = 0;
+    int redYLow = 0, redYHigh = 0;
+    int redZLow = 0, redZHigh = 0;
     prepareGui(RED_RANGE_WINDOW, &redXLow, &redXHigh, &redYLow, &redYHigh, &redZLow, &redZHigh);
 
-    int yellowXLow, yellowXHigh = 0;
-    int yellowYLow, yellowYHigh = 0;
-    int yellowZLow, yellowZHigh = 0;
-    prepareGui(RED_RANGE_WINDOW, &yellowXLow, &yellowXHigh, &yellowYLow, &yellowYHigh, &yellowZLow, &yellowZHigh);
+    int yellowXLow = 0, yellowXHigh = 0;
+    int yellowYLow = 0, yellowYHigh = 0;
+    int yellowZLow = 0, yellowZHigh = 0;
+    prepareGui(YELLOW_RANGE_WINDOW, &yellowXLow, &yellowXHigh, &yellowYLow, &yellowYHigh, &yellowZLow, &yellowZHigh);
 
     cam.addFilter(Groups::Color, [](cv::Mat& src) { 
         cv::cvtColor(src, src, cv::COLOR_BGR2XYZ);
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     float totalFPS = 0;
     int frameCount = 0;
 
-    cv::Mat test = cv::imread("webcam-test/north/2ftred.png");
+    cv::Mat test = cv::imread("webcam-test/red/north/2ftred.png");
 
     while(true) {
         timer.start();
