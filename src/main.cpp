@@ -1,15 +1,26 @@
 
 #include <iostream>
+#include <fstream>
 
 #include "camera.hpp"
 #include "Timer.h"
 #include "color.hpp"
+#include "filedata.hpp"
+
+#define YELLOW_RANGE_WINDOW "YellowRange - VisionCode"
+#define RED_RANGE_WINDOW "RedRange - VisionCode"
+
+#define COLOR_SHIFT_WINDOW "ColorShift - VisionCode"
+
+#define MIN_HEIGHT 0.2
 
 using namespace vision;
 
 enum Groups: FilterGroup {
     Color,
-    Range,
+
+    YellowRange,
+    RedRange,
 };
 
 void mouseCallback(int event, int x, int y, int flags, void* data) {
@@ -21,7 +32,7 @@ void mouseCallback(int event, int x, int y, int flags, void* data) {
     cv::Vec3b color = image->at<cv::Vec3b>(cv::Point(x, y));
 
     std::cout << "(" << x << ", " << y << ")\n";
-    std::cout << "B: " << (int)color.val[0] << " G: " << (int)color.val[1] << " B: " << (int)color.val[2] << "\n\n";
+    std::cout << color << "\n\n";
 }
 
 int largestContour(std::vector<std::vector<cv::Point>>& contours, cv::Rect& boundingRect) {
@@ -31,7 +42,8 @@ int largestContour(std::vector<std::vector<cv::Point>>& contours, cv::Rect& boun
     for (int i = 0; i < contours.size(); i++) {
         std::vector<cv::Point> polygon;
 
-        cv::approxPolyDP(cv::Mat(contours[i]), polygon, 3, true);
+        cv::approxPolyDP(cv::Mat(contours[i]), polygon, 6, true);
+
         cv::Rect curRect = cv::boundingRect(polygon);
 
         if (curRect.area() > max_area) {
@@ -57,52 +69,114 @@ cv::Rect boundingRect(cv::Mat& frame) {
     return boundingRect;
 }
 
+void prepareGui(const std::string& windowName, int* xLow, int* xHigh, int* yLow, int* yHigh, int* zLow, int* zHigh) {
+    cv::createTrackbar("X Low", windowName, xLow, 255, nullptr, nullptr);
+    cv::createTrackbar("Y Low", windowName, yLow, 255, nullptr, nullptr);
+    cv::createTrackbar("Z Low", windowName, zLow, 255, nullptr, nullptr);
+
+    cv::createTrackbar("X High", windowName, xHigh, 255, nullptr, nullptr);
+    cv::createTrackbar("Y High", windowName, yHigh, 255, nullptr, nullptr);
+    cv::createTrackbar("Z High", windowName, zHigh, 255, nullptr, nullptr);
+}
+
+void writeData(std::ofstream& file, int frameCount, Found found, cv::Rect& boundingRect) {
+    FileData data = {
+        frameCount,
+        found,
+
+        boundingRect.width,
+        boundingRect.height,
+
+        boundingRect.x + (boundingRect.width / 2),
+        boundingRect.y,
+
+        frameCount,
+    };
+
+    file.seekp(0);
+    file.write((const char*)&data, sizeof(data));
+    file.flush();
+}
+
 int main(int argc, char* argv[]) {
-    bool showScreen = false;
-
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        
-       if (arg == "--show") {
-            showScreen = true;
-       } 
-    }
-
-    cv::Mat colorShift;
-    cv::Mat inRange;
+    cv::Mat colorShift, redRange, yellowRange;
 
     Camera cam;
-    cv::namedWindow("test", 1);
-    cv::setMouseCallback("test", mouseCallback, &colorShift);
+    avc::Timer timer;
+
+    std::ofstream file("/dev/shm/stanchions");
+
+    cv::namedWindow(YELLOW_RANGE_WINDOW, 1);
+    cv::namedWindow(RED_RANGE_WINDOW, 1);
+    cv::namedWindow(COLOR_SHIFT_WINDOW, 1);
+
+    cv::setMouseCallback(COLOR_SHIFT_WINDOW, mouseCallback, &colorShift);
+
+    int redXLow, redXHigh = 0;
+    int redYLow, redYHigh = 0;
+    int redZLow, redZHigh = 0;
+    prepareGui(RED_RANGE_WINDOW, &redXLow, &redXHigh, &redYLow, &redYHigh, &redZLow, &redZHigh);
+
+    int yellowXLow, yellowXHigh = 0;
+    int yellowYLow, yellowYHigh = 0;
+    int yellowZLow, yellowZHigh = 0;
+    prepareGui(RED_RANGE_WINDOW, &yellowXLow, &yellowXHigh, &yellowYLow, &yellowYHigh, &yellowZLow, &yellowZHigh);
 
     cam.addFilter(Groups::Color, [](cv::Mat& src) { 
-        cv::cvtColor(src, src, cv::COLOR_BGR2HSV);
+        cv::cvtColor(src, src, cv::COLOR_BGR2XYZ);
     });
 
-    cam.addFilter(Groups::Range, [](cv::Mat& src) {
-        cv::inRange(src, cv::Scalar(10, 125, 40), cv::Scalar(20, 210, 140), src);
+    cam.addFilter(Groups::RedRange, [&](cv::Mat& src) {
+        cv::inRange(src, cv::Scalar(redXLow, redYLow, redZLow), cv::Scalar(redXHigh, redYHigh, redYHigh), src);
     });
 
-    avc::Timer timer;
+    cam.addFilter(Groups::YellowRange, [&](cv::Mat& src) {
+        cv::inRange(src, cv::Scalar(yellowXLow, yellowYLow, yellowZLow), cv::Scalar(yellowXHigh, yellowYHigh, yellowYHigh), src);
+    });
 
     float totalDT = 0;
     float totalFPS = 0;
     int frameCount = 0;
 
+    cv::Mat test = cv::imread("webcam-test/north/2ftred.png");
+
     while(true) {
         timer.start();
 
-        colorShift = cam.capture({Groups::Color}).clone();
-        inRange = cam.capture({Groups::Range}, false).clone();
+        colorShift = cam.capture({Groups::Color}, true, &test).clone();
+
+        redRange = cam.capture({Groups::RedRange}, true, &colorShift).clone();
+        cv::Rect redBounding = boundingRect(cam.filteredFrame); 
+        cv::rectangle(colorShift, redBounding, cv::Scalar(0, 0, 255), 2);
+
+        yellowRange = cam.capture({Groups::YellowRange}, true, &colorShift).clone();
+        cv::Rect yellowBounding = boundingRect(cam.filteredFrame); 
+        cv::rectangle(colorShift, yellowBounding, cv::Scalar(0, 255, 255), 2);
+    
+        float redRatio = (float)redBounding.height / cam.height;
+        float yellowRatio = (float)yellowBounding.height / cam.height;
         
-        cv::Rect bounding = boundingRect(inRange); 
-        cv::rectangle(cam.rawFrame, bounding, cv::Scalar(0, 0, 255), 2);
-        
-        if (showScreen) {
-            cv::imshow("test", cam.rawFrame);
+        Found found;
+        cv::Rect foundRect;
+
+        if (yellowRatio > MIN_HEIGHT) {
+            found = Found::Yellow; 
+            foundRect = redBounding;
+        } else if (redRatio > MIN_HEIGHT) {
+            found = Found::Red;
+            foundRect = yellowBounding;
+        } else {
+            found = Found::None;
+            foundRect = cv::Rect(0, 0, 0, 0);
         }
+
+        writeData(file, frameCount, found, foundRect);
+
+        cv::imshow(RED_RANGE_WINDOW, redRange);
+        cv::imshow(YELLOW_RANGE_WINDOW, yellowRange);
+        cv::imshow(COLOR_SHIFT_WINDOW, colorShift);
         
-        if (cv::waitKey(33) >= 0) {
+        if ((cv::waitKey(33) & 0xff) == 27) {
             break;
         }
 
@@ -116,9 +190,5 @@ int main(int argc, char* argv[]) {
 
     std::cout << color::Modifier(color::FG_DEFAULT) 
               << "\n" << "Average DT: " << (totalDT / frameCount) << "\tAverage FPS: " << (totalFPS / frameCount) << "\n";
-
-    cv::imwrite("output/colorShift.png", colorShift);
-    cv::imwrite("output/inRange.png", inRange);
-
     return 0;
 }

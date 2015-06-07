@@ -22,14 +22,18 @@ struct Camera {
 	cv::Mat filteredFrame;
 	
 	Camera(int id = 0);
+	Camera(std::string url);
 
 	// Captures and processes an image frame
-    cv::Mat& capture();
-    cv::Mat& capture(std::vector<FilterGroup> groups, bool clearPreviousFilters = true);
-    cv::Mat& captureCropped(std::vector<FilterGroup> groups, cv::Rect cropArea, bool clearPreviousFilters = true);
+    cv::Mat& capture(std::vector<FilterGroup> groups = {}, bool clearPreviousFilters = true, cv::Mat* image = nullptr);
+    cv::Mat& captureCropped(std::vector<FilterGroup> groups, cv::Rect cropArea, bool clearPreviousFilters = true, cv::Mat* image = nullptr);
 
     // Adds a filter to a specified filter group
     void addFilter(FilterGroup group, FilterFunc filter);
+
+private:
+    void prepareVideoCap();
+
 };
 
 }
