@@ -18,6 +18,7 @@ using namespace vision;
 
 enum Groups: FilterGroup {
     Color,
+    Clean,
 
     YellowRange,
     RedRange,
@@ -112,14 +113,26 @@ int main(int argc, char* argv[]) {
 
     cv::setMouseCallback(COLOR_SHIFT_WINDOW, mouseCallback, &colorShift);
 
+    std::ifstream values("values.txt");
+
     int redXLow = 0, redXHigh = 0;
     int redYLow = 0, redYHigh = 0;
     int redZLow = 0, redZHigh = 0;
+
+    values >> redXLow; values >> redXHigh;
+    values >> redYLow, values >> redYHigh;
+    values >> redZLow; values >> redZHigh;
+
     prepareGui(RED_RANGE_WINDOW, &redXLow, &redXHigh, &redYLow, &redYHigh, &redZLow, &redZHigh);
 
     int yellowXLow = 0, yellowXHigh = 0;
     int yellowYLow = 0, yellowYHigh = 0;
     int yellowZLow = 0, yellowZHigh = 0;
+
+    values >> yellowXLow; values >> yellowXHigh;
+    values >> yellowYLow, values >> yellowYHigh;
+    values >> yellowZLow; values >> yellowZHigh;
+
     prepareGui(YELLOW_RANGE_WINDOW, &yellowXLow, &yellowXHigh, &yellowYLow, &yellowYHigh, &yellowZLow, &yellowZHigh);
 
     cam.addFilter(Groups::Color, [](cv::Mat& src) { 
@@ -156,7 +169,7 @@ int main(int argc, char* argv[]) {
         float redRatio = (float)redBounding.height / cam.height;
         float yellowRatio = (float)yellowBounding.height / cam.height;
         
-        Found found;
+        Found found = Found::None;
         cv::Rect foundRect;
 
         if (yellowRatio > MIN_HEIGHT) {
@@ -170,6 +183,7 @@ int main(int argc, char* argv[]) {
             foundRect = cv::Rect(0, 0, 0, 0);
         }
 
+        std::cout << foundRect << "\n";
         writeData(file, frameCount, found, foundRect);
 
         cv::imshow(RED_RANGE_WINDOW, redRange);
