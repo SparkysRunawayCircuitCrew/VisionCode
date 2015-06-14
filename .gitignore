@@ -26,3 +26,9 @@ output/*
 *.la
 *.a
 *.lib
+
+*-xyz.jpg
+*-xyz-reduced.jpg
+*-hsv.jpg
+*-hsv-reduced.jpg
+*-bw.jpg

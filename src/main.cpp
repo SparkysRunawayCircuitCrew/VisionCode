@@ -33,7 +33,7 @@ void mouseCallback(int event, int x, int y, int flags, void* data) {
     cv::Vec3b color = image->at<cv::Vec3b>(cv::Point(x, y));
 
     std::cout << "(" << x << ", " << y << ")\n";
-    std::cout << color << "\n\n";
+    //std::cout << color << "\n\n";
 }
 
 int largestContour(std::vector<std::vector<cv::Point>>& contours, cv::Rect& boundingRect) {
@@ -99,7 +99,7 @@ void writeData(std::ofstream& file, int frameCount, Found found, cv::Rect& bound
     file.flush();
 }
 
-int main(int argc, char* argv[]) {
+int mainOrig(int argc, char* argv[]) {
     cv::Mat colorShift, redRange, yellowRange;
 
     Camera cam;
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
             foundRect = cv::Rect(0, 0, 0, 0);
         }
 
-        std::cout << foundRect << "\n";
+        //std::cout << foundRect << "\n";
         writeData(file, frameCount, found, foundRect);
 
         cv::imshow(RED_RANGE_WINDOW, redRange);
