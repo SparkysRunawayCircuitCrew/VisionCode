@@ -126,7 +126,7 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
         int w = curRect.width;
         int h = curRect.height;
 
-        if ((h > 15) && (h > maxH) && ((h * 100 / w) > 30)) {
+        if ((h > 15) && (h > maxH) && ((h * 100 / w) > 50)) {
             maxH = h;
             _fileData.boxWidth = w;
             _fileData.boxHeight = h;
@@ -250,7 +250,7 @@ int main(int argc, char* argv[]) {
     avc::Timer timer;
     while (!isInterrupted) {
         videoFeed >> origFrame;
-        //origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 40));
+        origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 40));
 
         Found found = filter.filter(origFrame);
 
