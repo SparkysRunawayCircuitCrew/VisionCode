@@ -1,7 +1,7 @@
 LANG:=C++
 OUTPUT:=vision
 LIBS:= $(shell pkg-config --cflags --libs opencv)
-FLAGS:= -g
+FLAGS:= -O2
 
 ifeq "$(LANG)" "C++"
   	EXT:=cpp
@@ -19,7 +19,7 @@ SRC:=$(shell find src -name *.${EXT})
 OBJ:=$(SRC:src/%.${EXT}=obj/%.o)
 DEP:=$(OBJ:%.o=%.d)
 
-CFLAGS:= -std=$(STD) $(LIBS) $(FLAGS) 
+CFLAGS:= -std=$(STD) $(FLAGS) 
 SHELL := /bin/bash
 INSTALL_DIR := /usr/local/bin
 
@@ -36,7 +36,7 @@ uninstall :
 	@echo Uninstall complete!
 
 compile : $(OBJ) 
-	@$(CC) $^ -o $(OUTPUT) $(CFLAGS)	
+	@$(CC) $^ -o $(OUTPUT) $(CFLAGS) $(LIBS)
 	@echo "Linking done. Compilation successful."
 
 obj/%.o : src/%.$(EXT) 
