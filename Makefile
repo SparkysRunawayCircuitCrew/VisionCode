@@ -1,6 +1,6 @@
 LANG:=C++
 OUTPUT:=vision
-LIBS:= -lopencv_core -lopencv_imgproc -lopencv_video -lopencv_highgui
+LIBS:= $(shell pkg-config --cflags --libs opencv)
 FLAGS:= -g
 
 ifeq "$(LANG)" "C++"
