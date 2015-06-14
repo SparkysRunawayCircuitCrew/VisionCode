@@ -46,7 +46,7 @@ namespace {
 // ---------------------------------------------------------------------
 
 void Filter::loadConfig() {
-    std::ifstream values("values.txt");
+    std::ifstream values("/etc/avc.conf.d/values.txt");
     readColorRanges(values, _redRanges);
     readColorRanges(values, _yelRanges);
     values.close();
@@ -112,7 +112,8 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
-    findContours(_bw.clone(), contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    cv::Mat bw_clone = _bw.clone();
+    findContours(bw_clone, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     int n = contours.size();
     int maxH = 0;
@@ -250,7 +251,7 @@ int main(int argc, char* argv[]) {
     avc::Timer timer;
     while (!isInterrupted) {
         videoFeed >> origFrame;
-        origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 40));
+        origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 50));
 
         Found found = filter.filter(origFrame);
 

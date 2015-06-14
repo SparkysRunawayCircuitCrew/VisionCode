@@ -8,7 +8,7 @@ declare missing_files="";
 
 for f in $(find . -name "*.png"); do
   echo -e "\nProcessing: ${f}  ";
-  if ./vision -f ${f}; then
+  if ./avc-vision -f ${f}; then
     found=$((found + 1));
   else
     missed=$((missed + 1));

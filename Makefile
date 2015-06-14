@@ -1,5 +1,5 @@
 LANG:=C++
-OUTPUT:=vision
+OUTPUT:=avc-vision
 LIBS:= $(shell pkg-config --cflags --libs opencv)
 FLAGS:= -O2
 
@@ -21,7 +21,7 @@ DEP:=$(OBJ:%.o=%.d)
 
 CFLAGS:= -std=$(STD) $(FLAGS) 
 SHELL := /bin/bash
-INSTALL_DIR := /usr/local/bin
+INSTALL_DIR := /usr/sbin/
 
 build : compile remove_unused_objects
 
@@ -29,6 +29,7 @@ rebuild : clean build
 
 install : build
 	@install ./$(OUTPUT) $(INSTALL_DIR)
+	@install -D values.txt /etc/avc.conf.d/values.txt
 	@echo Install complete!
 
 uninstall :
