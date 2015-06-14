@@ -3,13 +3,13 @@
 
 #include <iostream>
 #include <fstream>
+#include <signal.h>
 
 #define ENABLE_MAIN 1
 
 using namespace cv;
 using namespace vision;
 using namespace std;
-
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
@@ -167,10 +167,22 @@ ostream& Filter::print(ostream& out) const {
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
+namespace {
+    bool isInterrupted = false;
+
+    void interrupted(int sig) {
+        isInterrupted = true; 
+    }
+}
+
 #if ENABLE_MAIN
 
 int main(int argc, char* argv[]) {
+    signal(SIGINT, interrupted);
+    signal(SIGTERM, interrupted);
+
     string inFile;
+    string outputDir("/dev/shm");
 
     // Check for command line options
     for (int i = 1; i < argc; i++) {
@@ -178,6 +190,14 @@ int main(int argc, char* argv[]) {
             i++;
             if (i < argc) {
                 inFile = argv[i];
+            } else {
+                cerr << "Missing file name after \"-f FILE\" option\n";
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-o") == 0) {
+            i++;
+            if (i < argc) {
+                outputDir = argv[i];
             } else {
                 cerr << "Missing file name after \"-f FILE\" option\n";
                 return 1;
@@ -227,9 +247,8 @@ int main(int argc, char* argv[]) {
 
     Mat origFrame;
 
-
     avc::Timer timer;
-    while (true) {
+    while (!isInterrupted) {
         videoFeed >> origFrame;
 
         Found found = filter.filter(origFrame);
@@ -241,6 +260,9 @@ int main(int argc, char* argv[]) {
         cout << "Frame: " << frames << "  total time: " << secs << " secs (" << fps << " FPS), results:\n"
              << filter << "\n";
     }
+
+    cv::imwrite(outputDir + "/avc-vision-orig.jpg", origFrame);
+    filter.writeImages(outputDir + "/avc-vision");
 
     return 0;
 }
