@@ -35,10 +35,10 @@ Filter::~Filter() {
 
 namespace {
     istream& readColorRanges(istream& in, int* ranges) {
-	for (int i = 0; i < 6; i++) {
-	    in >> ranges[i];
-	}
-	return in;
+        for (int i = 0; i < 6; i++) {
+            in >> ranges[i];
+        }
+        return in;
     }
 }
 
@@ -67,8 +67,8 @@ Found Filter::filter(const Mat& src) {
     // Try looking for yellow stanchion first
     Found found = filterColorRange(_yelRanges, Found::Yellow);
     if ((found == Found::None) && _redEnabled) {
-	// If yellow not found, then try red
-	found = filterColorRange(_redRanges, Found::Red);
+        // If yellow not found, then try red
+        found = filterColorRange(_redRanges, Found::Red);
     }
 
     // Transfer final values and set safety frame count to match to signal done
@@ -88,9 +88,9 @@ void Filter::writeImages(const string& baseName) const {
     int n = sizeof(names) / sizeof(names[0]);
 
     for (int i = 0; i < n; i++) {
-	string fn(baseName);
-	fn += names[i];
-	imwrite(fn, *images[i]);
+        string fn(baseName);
+        fn += names[i];
+        imwrite(fn, *images[i]);
     }
 
 }
@@ -123,16 +123,16 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
         approxPolyDP(Mat(contours[i]), polygon, 6, true);
 
         Rect curRect = boundingRect(polygon);
-	int w = curRect.width;
-	int h = curRect.height;
+        int w = curRect.width;
+        int h = curRect.height;
 
         if ((h > 15) && (h > maxH) && ((h * 100 / w) > 30)) {
             maxH = h;
-	    _fileData.boxWidth = w;
-	    _fileData.boxHeight = h;
-	    _fileData.xMid = curRect.x + (w / 2);
-	    _fileData.yBot = curRect.y;
-	    _fileData.found = colorToFind;
+            _fileData.boxWidth = w;
+            _fileData.boxHeight = h;
+            _fileData.xMid = curRect.x + (w / 2);
+            _fileData.yBot = curRect.y;
+            _fileData.found = colorToFind;
         }
     }
 
@@ -148,18 +148,18 @@ ostream& Filter::print(ostream& out) const {
       << _fileData.frameCount
       << "  Found: ";
     if (_fileData.found == Found::Red) {
-	out << " Red Stanchion\n";
+        out << " Red Stanchion\n";
     } else if (_fileData.found == Found::Yellow) {
-	out << " Yellow Stanchion\n";
+        out << " Yellow Stanchion\n";
     } else {
-	out << " Nothing";
-	return out;
+        out << " Nothing";
+        return out;
     }
 
     out << "  Width: " << _fileData.boxWidth
-	<< "  Height: " << _fileData.boxHeight
-	<< "  X-Mid: " << _fileData.xMid
-	<< "  Y-Bot: " << _fileData.yBot;
+        << "  Height: " << _fileData.boxHeight
+        << "  X-Mid: " << _fileData.xMid
+        << "  Y-Bot: " << _fileData.yBot;
 
     return out;
 }
@@ -174,52 +174,52 @@ int main(int argc, char* argv[]) {
 
     // Check for command line options
     for (int i = 1; i < argc; i++) {
-	if (strcmp(argv[i], "-f") == 0) {
-	    i++;
-	    if (i < argc) {
-		inFile = argv[i];
-	    } else {
-		cerr << "Missing file name after \"-f FILE\" option\n";
-		return 1;
-	    }
-	}
+        if (strcmp(argv[i], "-f") == 0) {
+            i++;
+            if (i < argc) {
+                inFile = argv[i];
+            } else {
+                cerr << "Missing file name after \"-f FILE\" option\n";
+                return 1;
+            }
+        }
     }
 
     Filter filter;
 
     // If processing a single file (-f FILE)
     if (inFile.size() > 0) {
-	Mat orig = imread(inFile);
+        Mat orig = imread(inFile);
 
-	// Create base name for output files
-	string baseName(inFile);
-	int pos = baseName.rfind('.');
-	if (pos != string::npos) {
-	    baseName.erase(pos);
-	}
+        // Create base name for output files
+        string baseName(inFile);
+        int pos = baseName.rfind('.');
+        if (pos != string::npos) {
+            baseName.erase(pos);
+        }
 
-	avc::Timer timer;
-	Found found = filter.filter(orig);
-	timer.pause();
+        avc::Timer timer;
+        Found found = filter.filter(orig);
+        timer.pause();
 
-	// Write out individual image files
-	filter.writeImages(baseName);
+        // Write out individual image files
+        filter.writeImages(baseName);
 
-	float secs = timer.secsElapsed();
-	float fps = (secs > 0) ? (1.0 / secs) : 0;
+        float secs = timer.secsElapsed();
+        float fps = (secs > 0) ? (1.0 / secs) : 0;
 
-	cout << "Filter ran in " << secs << " secs (" << fps << " FPS), results:\n"
-	     << filter << "\n";
+        cout << "Filter ran in " << secs << " secs (" << fps << " FPS), results:\n"
+             << filter << "\n";
 
-	// Return 0 to parent process if we found image (for scripting)
-	return (found == Found::None ? 1 : 0);
+        // Return 0 to parent process if we found image (for scripting)
+        return (found == Found::None ? 1 : 0);
     }
 
     // Video processing
     VideoCapture videoFeed(0);
     if (!videoFeed.isOpened()) {
-	cerr << "Failed to open camera\n";
-	return 1;
+        cerr << "Failed to open camera\n";
+        return 1;
     }
 
     videoFeed.set(CV_CAP_PROP_FRAME_WIDTH, 320);
@@ -230,16 +230,16 @@ int main(int argc, char* argv[]) {
 
     avc::Timer timer;
     while (true) {
-	videoFeed >> origFrame;
+        videoFeed >> origFrame;
 
-	Found found = filter.filter(origFrame);
+        Found found = filter.filter(origFrame);
 
-	float frames = filter.getFileData().frameCount;
-	float secs = timer.secsElapsed();
-	float fps = (secs > 0) ? (frames / secs) : 0;
+        float frames = filter.getFileData().frameCount;
+        float secs = timer.secsElapsed();
+        float fps = (secs > 0) ? (frames / secs) : 0;
 
-	cout << "Frame: " << frames << "  total time: " << secs << " secs (" << fps << " FPS), results:\n"
-	     << filter << "\n";
+        cout << "Frame: " << frames << "  total time: " << secs << " secs (" << fps << " FPS), results:\n"
+             << filter << "\n";
     }
 
     return 0;
