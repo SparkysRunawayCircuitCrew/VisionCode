@@ -250,6 +250,7 @@ int main(int argc, char* argv[]) {
     avc::Timer timer;
     while (!isInterrupted) {
         videoFeed >> origFrame;
+        //origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 40));
 
         Found found = filter.filter(origFrame);
 
