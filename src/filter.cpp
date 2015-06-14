@@ -112,7 +112,7 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
     vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
-    findContours(_bw, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    findContours(_bw.clone(), contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     int n = contours.size();
     int maxH = 0;
