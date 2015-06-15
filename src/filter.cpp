@@ -4,6 +4,9 @@
 #include <iostream>
 #include <fstream>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #define ENABLE_MAIN 1
 
@@ -168,12 +171,106 @@ ostream& Filter::print(ostream& out) const {
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
+ostream& Filter::printFrameRate(ostream& out, float secs) const {
+    float frames = getFileData().frameCount;
+    float fps = (secs > 0) ? (frames / secs) : 0;
+
+    out << "Frame: " << frames << "  total time: "
+	<< secs << " secs (" << fps << " FPS), results:\n"
+	<< *this << "\n";
+
+    return out;
+}
+
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+
 namespace {
     bool isInterrupted = false;
 
     void interrupted(int sig) {
         isInterrupted = true; 
     }
+
+    /**
+     * Helper class to deal with command line argument options.
+     */
+
+    class Options {
+    public:
+	Options(int argc, char** argv) : 
+	    ok(true),
+	    verboseOut(false),
+	    readFromFile(false),
+	    inputFile(""),
+	    outputDir("/dev/shm") {
+
+	    int opt;
+	    while ((opt = getopt(argc, argv, "hvf:o:")) != -1) {
+		switch (opt) {
+		case 'f':
+		    readFromFile = true;
+		    inputFile = optarg;
+		    break;
+		case 'o':
+		    outputDir = optarg;
+		    break;
+
+		case 'v':
+		    verboseOut = true;
+		    break;
+
+		case 'h':
+		default:
+		    ok = false;
+		    cerr << "\n"
+"Usage:\n"
+"\n"
+"  avc-vision [-h] [-f FILE_TO_PROCESS] [-o OUTPUT_DIR]\n"
+"\n"
+"Where:\n"
+"\n"
+"  -h\n"
+"    Displays this help information\n"
+"\n"
+"  -v\n"
+"    Display more verbose output to the console\n"
+"\n"
+"  -f FILE_TO_PROCESS\n"
+"    Reads image from FILE_TO_PROCESS, processes image, writes out\n"
+"    multiple image files for each step of processing and displays\n"
+"    summary results to the console.\n"
+"\n"
+"  -o OUTPUT_DIR\n"
+"\n"
+"    This option indicates that the program should dump information\n"
+"    about the last image processed prior to program termination (only\n"
+"    used in streaming mode).\n"
+"\n";
+		}
+	    }
+	}
+
+	bool verbose() const { return verboseOut; }
+	bool isOk() const { return ok; }
+	bool isFileMode() const { return readFromFile; }
+	const string& getImageFile() const { return inputFile; }
+
+	const string& getOutputDir() const { return outputDir; }
+
+    private:
+	bool ok;
+
+	bool verboseOut;
+
+	// Used to indicate that we should process single image from file
+	// (-f FILE)
+	bool readFromFile;
+	string inputFile;
+
+	// Output directory
+	string outputDir;
+    };
 }
 
 #if ENABLE_MAIN
@@ -182,38 +279,20 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, interrupted);
     signal(SIGTERM, interrupted);
 
-    string inFile;
-    string outputDir("/dev/shm");
-
-    // Check for command line options
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-f") == 0) {
-            i++;
-            if (i < argc) {
-                inFile = argv[i];
-            } else {
-                cerr << "Missing file name after \"-f FILE\" option\n";
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-o") == 0) {
-            i++;
-            if (i < argc) {
-                outputDir = argv[i];
-            } else {
-                cerr << "Missing file name after \"-f FILE\" option\n";
-                return 1;
-            }
-        }
+    // Evalutate/check command line arguments
+    Options opts(argc, argv);
+    if (opts.isOk() != true) {
+	return 1;
     }
 
     Filter filter;
 
     // If processing a single file (-f FILE)
-    if (inFile.size() > 0) {
-        Mat orig = imread(inFile);
+    if (opts.isFileMode()) {
+        Mat orig = imread(opts.getImageFile());
 
         // Create base name for output files
-        string baseName(inFile);
+        string baseName(opts.getImageFile());
         int pos = baseName.rfind('.');
         if (pos != string::npos) {
             baseName.erase(pos);
@@ -221,16 +300,11 @@ int main(int argc, char* argv[]) {
 
         avc::Timer timer;
         Found found = filter.filter(orig);
-        timer.pause();
+
+	filter.printFrameRate(cout, timer.secsElapsed());
 
         // Write out individual image files
         filter.writeImages(baseName);
-
-        float secs = timer.secsElapsed();
-        float fps = (secs > 0) ? (1.0 / secs) : 0;
-
-        cout << "Filter ran in " << secs << " secs (" << fps << " FPS), results:\n"
-             << filter << "\n";
 
         // Return 0 to parent process if we found image (for scripting)
         return (found == Found::None ? 1 : 0);
@@ -249,22 +323,24 @@ int main(int argc, char* argv[]) {
     Mat origFrame;
 
     avc::Timer timer;
+
+    int foundLast = -1;
+
     while (!isInterrupted) {
         videoFeed >> origFrame;
         origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 50));
 
-        Found found = filter.filter(origFrame);
-
-        float frames = filter.getFileData().frameCount;
-        float secs = timer.secsElapsed();
-        float fps = (secs > 0) ? (frames / secs) : 0;
-
-        cout << "Frame: " << frames << "  total time: " << secs << " secs (" << fps << " FPS), results:\n"
-             << filter << "\n";
+        int found = filter.filter(origFrame);
+	if ((found != foundLast) || opts.verbose()) {
+	    filter.printFrameRate(cout, timer.secsElapsed());
+	    foundLast = found;
+	}
     }
 
-    cv::imwrite(outputDir + "/avc-vision-orig.jpg", origFrame);
-    filter.writeImages(outputDir + "/avc-vision");
+    filter.printFrameRate(cout, timer.secsElapsed());
+
+    cv::imwrite(opts.getOutputDir() + "/avc-vision-orig.jpg", origFrame);
+    filter.writeImages(opts.getOutputDir() + "/avc-vision");
 
     return 0;
 }

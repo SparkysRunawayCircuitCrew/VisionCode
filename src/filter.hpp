@@ -66,6 +66,13 @@ namespace vision {
         /** Dump information about results of last image processed. */
         std::ostream& print(std::ostream& out) const;
 
+	/** Dump information about last image processes and total FPS.
+	 *
+	 * @param out Where to write the information.
+	 * @param secs How many total seconds have elapsed.
+	 */
+	std::ostream& printFrameRate(std::ostream& out, float secs) const;
+
     private:
         void loadConfig();
         Found filterColorRange(const int* ranges, Found colorToFind);
