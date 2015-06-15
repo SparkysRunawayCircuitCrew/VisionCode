@@ -2,6 +2,8 @@
 #include "Timer.h"
 
 #include <iostream>
+#include <iomanip>
+
 #include <fstream>
 #include <signal.h>
 #include <stdio.h>
@@ -294,15 +296,22 @@ namespace {
 	    verboseOut(false),
 	    enableRed(true),
 	    enableYellow(true),
+	    changeDirEnabled(false),
 	    readFromFile(false),
 	    inputFile(""),
 	    outputDir("/dev/shm"),
-	    stanchionsFile("/dev/shm/stanchions")
+	    stanchionsFile("/dev/shm/stanchions"),
+	    changeDir("")
 	{
 
 	    int opt;
-	    while ((opt = getopt(argc, argv, "hvryf:o:")) != -1) {
+	    while ((opt = getopt(argc, argv, "c:f:ho:rvy")) != -1) {
 		switch (opt) {
+
+		case 'c':
+		    changeDir = optarg;
+		    changeDirEnabled = true;
+		    break;
 
 		case 'f':
 		    readFromFile = true;
@@ -311,11 +320,6 @@ namespace {
 
 		case 'o':
 		    outputDir = optarg;
-		    break;
-
-		case 'y':
-		    enableRed = false;
-		    enableYellow = true;
 		    break;
 
 		case 'r':
@@ -327,6 +331,11 @@ namespace {
 		    verboseOut = true;
 		    break;
 
+		case 'y':
+		    enableRed = false;
+		    enableYellow = true;
+		    break;
+
 		case 'h':
 		default:
 		    ok = false;
@@ -334,6 +343,7 @@ namespace {
 "Usage:\n"
 "\n"
 "  avc-vision [-h] [-v] [-r|-y] [-f FILE_TO_PROCESS] [-o OUTPUT_DIR]\n"
+"             [-c CHANGE_DIR]\n"
 "\n"
 "Where:\n"
 "\n"
@@ -355,10 +365,15 @@ namespace {
 "    summary results to the console.\n"
 "\n"
 "  -o OUTPUT_DIR\n"
-"\n"
 "    This option indicates that the program should dump information\n"
 "    about the last image processed prior to program termination (only\n"
 "    used in streaming mode).\n"
+"\n"
+"  -c CHANGE_DIR\n"
+"    This option enables the video streaming mode to save a copy of\n"
+"    the original image just processed each time it finds something\n"
+"    different. Files names will be: avc-vision-FRAME.png. NOTE: If\n"
+"    you include the -v option, then ALL frames are written.\n"
 "\n";
 		}
 	    }
@@ -370,6 +385,15 @@ namespace {
 	const string& getImageFile() const { return inputFile; }
 
 	const string& getOutputDir() const { return outputDir; }
+
+	void writeToChangeDir(const Mat& img, int frame) const {
+	    if (changeDirEnabled) {
+		ostringstream buf;
+		buf << changeDir << "/avc-vision-" << setw(6)
+		    << setfill('0') << frame << ".png";
+		imwrite(buf.str(), img);
+	    }
+	}
 
 	/** Name of stanchions output file (typically: "/dev/shm/stanchions"). */
 	const string& getStanchionsFile() const { return stanchionsFile; }
@@ -385,6 +409,8 @@ namespace {
 	bool enableRed;
 	bool enableYellow;
 
+	bool changeDirEnabled;
+
 	// Used to indicate that we should process single image from file
 	// (-f FILE)
 	bool readFromFile;
@@ -393,10 +419,16 @@ namespace {
 	// Output directory
 	string outputDir;
 
+	// Output for copies of frame images when -c CHANGE_DIR specified
+	string changeDir;
+
 	// Stanchions file
 	string stanchionsFile;
     };
 }
+
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 #if ENABLE_MAIN
 
@@ -464,6 +496,7 @@ int main(int argc, char* argv[]) {
 
         int found = filter.filter(origFrame);
 	if ((found != foundLast) || opts.verbose()) {
+	    opts.writeToChangeDir(origFrame, filter.getFileData().frameCount);
 	    filter.printFrameRate(cout, timer.secsElapsed());
 	    foundLast = found;
 	}
