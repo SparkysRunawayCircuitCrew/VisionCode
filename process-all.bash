@@ -2,6 +2,9 @@
 #
 #  Runs every PNG file found under the current directory through the filter
 
+declare topDir="${1:-.}";
+shift;
+
 declare -i found=0;
 declare -i missed=0;
 declare missing_files="";
@@ -22,12 +25,12 @@ is_output_file() {
   return 1;
 }
 
-for f in $(find . -name "*.png"); do
+for f in $(find ${topDir} -name "*.png"); do
   if is_output_file "${f}"; then
     continue;
   fi
   echo -e "\nProcessing: ${f}  ";
-  if ./avc-vision -f ${f}; then
+  if ./avc-vision -f ${f} "${@}"; then
     found=$((found + 1));
   else
     missed=$((missed + 1));

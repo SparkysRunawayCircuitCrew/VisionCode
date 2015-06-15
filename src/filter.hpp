@@ -54,10 +54,14 @@ namespace vision {
 	}
 
         /**
-         * Method allows you to disable the fall back to red filter
-         * (only useful when debugging yellow search algorithms).
+         * Method allows you to enable or disable the search for the red target.
          */
-        void disableRed() { _redEnabled = false; }
+        void setRedEnabled(bool enable) { _redEnabled = enable; }
+
+        /**
+         * Method allows you to enable or disable the search for the yellow target.
+         */
+        void setYellowEnabled(bool enable) { _yellowEnabled = enable; }
 
         /**
          * Writes out all image files (from each step of the process).
@@ -122,6 +126,9 @@ namespace vision {
         // Whether or not the red filter is enabled (normally is
         // unless debugging yellow)
         bool _redEnabled;
+        // Whether or not the yellow filter is enabled (normally is
+        // unless debugging red)
+        bool _yellowEnabled;
     };
 
     // Helper method to dump information about Filter to output stream

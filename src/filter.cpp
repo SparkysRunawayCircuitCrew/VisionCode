@@ -21,7 +21,8 @@ Filter::Filter() :
     _colorReduced(),
     _grayScale(),
     _bw(),
-    _redEnabled(true)
+    _redEnabled(true),
+    _yellowEnabled(true)
 {
     memset(&_fileData, 0, sizeof(_fileData));
     loadConfig();
@@ -71,7 +72,8 @@ Found Filter::filter(const Mat& src) {
     cvtColor(_cropped, _colorTransformed, cv::COLOR_BGR2HSV);
 
     // Try looking for yellow stanchion first
-    Found found = filterColorRange(_yelRanges, Found::Yellow);
+    Found found = _yellowEnabled ? filterColorRange(_yelRanges, Found::Yellow) : Found::None;
+
     if ((found == Found::None) && _redEnabled) {
         // If yellow not found, then try red
         found = filterColorRange(_redRanges, Found::Red);
@@ -290,19 +292,35 @@ namespace {
 	Options(int argc, char** argv) : 
 	    ok(true),
 	    verboseOut(false),
+	    enableRed(true),
+	    enableYellow(true),
 	    readFromFile(false),
 	    inputFile(""),
-	    outputDir("/dev/shm") {
+	    outputDir("/dev/shm"),
+	    stanchionsFile("/dev/shm/stanchions")
+	{
 
 	    int opt;
-	    while ((opt = getopt(argc, argv, "hvf:o:")) != -1) {
+	    while ((opt = getopt(argc, argv, "hvryf:o:")) != -1) {
 		switch (opt) {
+
 		case 'f':
 		    readFromFile = true;
 		    inputFile = optarg;
 		    break;
+
 		case 'o':
 		    outputDir = optarg;
+		    break;
+
+		case 'y':
+		    enableRed = false;
+		    enableYellow = true;
+		    break;
+
+		case 'r':
+		    enableRed = true;
+		    enableYellow = false;
 		    break;
 
 		case 'v':
@@ -315,12 +333,18 @@ namespace {
 		    cerr << "\n"
 "Usage:\n"
 "\n"
-"  avc-vision [-h] [-f FILE_TO_PROCESS] [-o OUTPUT_DIR]\n"
+"  avc-vision [-h] [-v] [-r|-y] [-f FILE_TO_PROCESS] [-o OUTPUT_DIR]\n"
 "\n"
 "Where:\n"
 "\n"
 "  -h\n"
 "    Displays this help information\n"
+"\n"
+"  -r\n"
+"    Only enable search for red stanchion (disable yellow)\n"
+"\n"
+"  -y\n"
+"    Only enable search for yellow stanchion (disable red)\n"
 "\n"
 "  -v\n"
 "    Display more verbose output to the console\n"
@@ -347,10 +371,19 @@ namespace {
 
 	const string& getOutputDir() const { return outputDir; }
 
+	/** Name of stanchions output file (typically: "/dev/shm/stanchions"). */
+	const string& getStanchionsFile() const { return stanchionsFile; }
+
+	const bool isRedEnabled() const { return enableRed; }
+	const bool isYellowEnabled() const { return enableYellow; }
+
     private:
 	bool ok;
 
 	bool verboseOut;
+
+	bool enableRed;
+	bool enableYellow;
 
 	// Used to indicate that we should process single image from file
 	// (-f FILE)
@@ -359,6 +392,9 @@ namespace {
 
 	// Output directory
 	string outputDir;
+
+	// Stanchions file
+	string stanchionsFile;
     };
 }
 
@@ -375,6 +411,8 @@ int main(int argc, char* argv[]) {
     }
 
     Filter filter;
+    filter.setRedEnabled(opts.isRedEnabled());
+    filter.setYellowEnabled(opts.isYellowEnabled());
 
     // If processing a single file (-f FILE)
     if (opts.isFileMode()) {
@@ -411,6 +449,9 @@ int main(int argc, char* argv[]) {
 
     Mat origFrame;
 
+    // Where to write out information about what we see
+    ofstream stanchionsFile(opts.getStanchionsFile());
+
     // Get initial frame and toss (incase first one is bad)
     videoFeed >> origFrame;
 
@@ -426,6 +467,10 @@ int main(int argc, char* argv[]) {
 	    filter.printFrameRate(cout, timer.secsElapsed());
 	    foundLast = found;
 	}
+
+	stanchionsFile.seekp(0);
+	stanchionsFile.write((const char*) &filter.getFileData(), sizeof(FileData));
+	stanchionsFile.flush();
     }
 
     if (filter.getFileData().frameCount > 0) {
