@@ -64,8 +64,11 @@ Found Filter::filter(const Mat& src) {
     _fileData.boxWidth = _fileData.boxHeight = 0;
     _fileData.xMid = _fileData.yBot = 0;
 
+    // Crop the image
+    _cropped = src(cv::Rect(0, 50, src.cols, src.rows - 50));
+
     // Convert to XYZ color space
-    cvtColor(src, _colorTransformed, cv::COLOR_BGR2HSV);
+    cvtColor(_cropped, _colorTransformed, cv::COLOR_BGR2HSV);
 
     // Try looking for yellow stanchion first
     Found found = filterColorRange(_yelRanges, Found::Yellow);
@@ -84,16 +87,104 @@ Found Filter::filter(const Mat& src) {
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
-void Filter::writeImages(const string& baseName) const {
-    const string names[] = { "-hsv.jpg", "-hsv-reduced.jpg", "-bw.jpg" };
-    const Mat* images[] = { &_colorTransformed, &_colorReduced, &_bw };
+void Filter::writeImages(const string& baseName, const Mat& orig, bool writeOrig) const {
+    Mat contoursImg, possibleImg, polygonImg, foundImg;
+    _cropped.copyTo(contoursImg);
+    _cropped.copyTo(possibleImg);
+    _cropped.copyTo(polygonImg);
+    _cropped.copyTo(foundImg);
 
-    int n = sizeof(names) / sizeof(names[0]);
+    Scalar contourColor(255, 255, 0);
+    Scalar polygonLabelColor(255, 128, 200);
+
+    int n = _contours.size();
+    for (int i = 0; i < n; i++) {
+	drawContours(contoursImg, _contours, i, contourColor, 1);
+
+	vector<Point> polygon;
+	Rect br;
+        approxPolyDP(Mat(_contours[i]), polygon, 6, true);
+
+	if (isPossibleStanchion(polygon, br)) {
+	    drawContours(possibleImg, _contours, i, contourColor, 1);
+
+	    //	    polylines(polygonImg, polygon, false, contourColor, 1);
+	    const cv::Point* pts = (const cv::Point*) Mat(polygon).data;
+	    int npts = Mat(polygon).rows;
+	    polylines(polygonImg, &pts, &npts, 1, true, contourColor, 3);
+
+	    char buf[100];
+	    snprintf(buf, sizeof(buf), "%d", polygon.size());
+	    Point textPt(br.x + br.width / 2 - 8, br.y + (br.height / 2) - 5);
+	    putText(polygonImg, buf, textPt, FONT_HERSHEY_PLAIN,
+		    0.75, polygonLabelColor);
+	}
+    }
+
+    string foundExt;
+    bool found = false;
+
+    if (_fileData.found == Found::Red) {
+	found = true;
+	foundExt = "-red.png";
+    } else if (_fileData.found == Found::Yellow) {
+	found = true;
+	foundExt = "-yellow.png";
+    }
+
+    if (found) {
+	int x = _fileData.getX();
+	int y = _fileData.getY();
+	int w = _fileData.getWidth();
+	int h = _fileData.getHeight();
+	int cx = _fileData.xMid;
+	int cy = y + h / 2;
+	int rx = x + w;
+	int by = _fileData.yBot;
+	int iw = foundImg.cols;
+	int ih = foundImg.rows;
+
+	Rect br(x, y, w, h);
+	rectangle(foundImg, br, contourColor, 3);
+	
+	int fontSpacing = 15;
+	int topText = y - 4;
+	int botText = by + fontSpacing;
+	int topGap = topText - fontSpacing;
+	int botGap = ih - botText;
+
+	int textY = (botGap > topGap) ? botText : topText;
+	textY = min(max(fontSpacing, textY), ih - fontSpacing);
+
+	char buf[1024];
+	snprintf(buf, sizeof(buf), "%s sz(%dx%d) tl(%d,%d), cp(%d,%d), br(%d,%d)",
+		 (_fileData.found == Found::Yellow ? "Yel" : "Red"),
+		 w, h, x, y, cx, cy, rx, by);
+
+	putText(foundImg, buf, Point(4, textY), FONT_HERSHEY_PLAIN,
+		0.75, contourColor);
+    }
+
+    const string names[] = {
+	(writeOrig ? "-orig.png" : ""), "-cropped.png",
+	"-hsv.png", "-hsv-reduced.png", "-bw.png",
+	"-contours.png", "-contours-possible.png", "-polygons.png",
+	foundExt
+    };
+    const Mat* images[] = {
+	&orig, &_cropped, &_colorTransformed, &_colorReduced, &_bw,
+	&contoursImg, &possibleImg, &polygonImg,
+	&foundImg
+    };
+
+    n = sizeof(names) / sizeof(names[0]);
 
     for (int i = 0; i < n; i++) {
-        string fn(baseName);
-        fn += names[i];
-        imwrite(fn, *images[i]);
+	if ((names[i].size() != 0) && (images[i] != 0)) {
+	    string fn(baseName);
+	    fn += names[i];
+	    imwrite(fn, *images[i]);
+	}
     }
 
 }
@@ -112,30 +203,28 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
     threshold(_colorReduced, _bw, 127, 255, THRESH_BINARY);
 
     // Now go look for stanchion in black and white image
-    vector<vector<Point>> contours;
     vector<Vec4i> hierarchy;
 
     cv::Mat bwClone = _bw.clone();
-    findContours(bwClone, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    findContours(bwClone, _contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
-    int n = contours.size();
+    int n = _contours.size();
     int maxH = 0;
 
     for (int i = 0; i < n; i++) {
         vector<Point> polygon;
+        Rect br;
 
-        approxPolyDP(Mat(contours[i]), polygon, 6, true);
+        approxPolyDP(Mat(_contours[i]), polygon, 6, true);
 
-        Rect curRect = boundingRect(polygon);
-        int w = curRect.width;
-        int h = curRect.height;
-
-        if ((h > 15) && (h > maxH) && ((h * 100 / w) > 50)) {
+        if (isPossibleStanchion(polygon, br) && (br.height > maxH)) {
+	    int h = br.height;
+	    int w = br.width;
             maxH = h;
             _fileData.boxWidth = w;
             _fileData.boxHeight = h;
-            _fileData.xMid = curRect.x + (w / 2);
-            _fileData.yBot = curRect.y;
+            _fileData.xMid = br.x + (w / 2);
+            _fileData.yBot = br.y + h;
             _fileData.found = colorToFind;
         }
     }
@@ -304,7 +393,7 @@ int main(int argc, char* argv[]) {
 	filter.printFrameRate(cout, timer.secsElapsed());
 
         // Write out individual image files
-        filter.writeImages(baseName);
+        filter.writeImages(baseName, orig, false);
 
         // Return 0 to parent process if we found image (for scripting)
         return (found == Found::None ? 1 : 0);
@@ -322,13 +411,15 @@ int main(int argc, char* argv[]) {
 
     Mat origFrame;
 
+    // Get initial frame and toss (incase first one is bad)
+    videoFeed >> origFrame;
+
     avc::Timer timer;
 
     int foundLast = -1;
 
     while (!isInterrupted) {
         videoFeed >> origFrame;
-        origFrame = origFrame(cv::Rect(0, 0, origFrame.cols, origFrame.rows - 50));
 
         int found = filter.filter(origFrame);
 	if ((found != foundLast) || opts.verbose()) {
@@ -337,10 +428,13 @@ int main(int argc, char* argv[]) {
 	}
     }
 
-    filter.printFrameRate(cout, timer.secsElapsed());
+    if (filter.getFileData().frameCount > 0) {
+	filter.printFrameRate(cout, timer.secsElapsed());
 
-    cv::imwrite(opts.getOutputDir() + "/avc-vision-orig.jpg", origFrame);
-    filter.writeImages(opts.getOutputDir() + "/avc-vision");
+	filter.writeImages(opts.getOutputDir() + "/avc-vision", origFrame, true);
+    } else {
+	cout << "***ERROR*** Failed to read/process any video frames from camera\n";
+    }
 
     return 0;
 }

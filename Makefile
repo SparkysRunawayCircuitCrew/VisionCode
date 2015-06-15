@@ -4,7 +4,7 @@ LIBS:= $(shell pkg-config --cflags --libs opencv)
 FLAGS:= -O2
 
 ifeq "$(LANG)" "C++"
-  	EXT:=cpp
+	EXT:=cpp
 	STD:=c++11
 	CC:=$(CXX)
 else ifeq "$(LANG)" "C"
@@ -59,10 +59,22 @@ ifneq '' '$(filter-out $(OBJ), $(FILES_IN_OBJ))' # finds out which object files 
 else
 	@echo "No object files require deletion."
 endif
-	
-clean : 
-	@rm -r obj/*
-	@rm $(shell find . -name $(OUTPUT)*)
+
+cleanImages:
+	@rm -f \
+	  $$(find . -name "*-bw.png") \
+	  $$(find . -name "*-contours.png") \
+	  $$(find . -name "*-contours-possible.png") \
+	  $$(find . -name "*-cropped.png") \
+	  $$(find . -name "*-hsv.png") \
+	  $$(find . -name "*-hsv-reduced.png") \
+	  $$(find . -name "*-orig.png") \
+	  $$(find . -name "*-polygons.png") \
+	  $$(find . -name "*-red.png") \
+	  $$(find . -name "*-yellow.png")
+
+clean : cleanImages
+	@rm -fr obj/* $(shell find . -name $(OUTPUT)*)
 	@echo "Cleaned out object files and binaries."
 
 debug :

@@ -6,7 +6,26 @@ declare -i found=0;
 declare -i missed=0;
 declare missing_files="";
 
+is_output_file() {
+  # If no "-" in file name then OK
+  if [ "${f//-/}" == "${f}" ]; then
+    return 1;
+  fi
+  for e in "-bw" "-contours" "-cropped" "-hsv" "-orig.png" "-polygons" \
+           "-red.png" "-yellow.png"; do
+    if [ "${f//${e}/}" != "${f}" ]; then
+      # File name contained one of the common output names, consider as output file
+      return 0;
+    fi
+  done
+
+  return 1;
+}
+
 for f in $(find . -name "*.png"); do
+  if is_output_file "${f}"; then
+    continue;
+  fi
   echo -e "\nProcessing: ${f}  ";
   if ./avc-vision -f ${f}; then
     found=$((found + 1));

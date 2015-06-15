@@ -33,6 +33,26 @@ namespace vision {
          */
         Found filter(const cv::Mat& mat);
 
+	/**
+	 * Checks a polygon bounding box to see if it could be a stanchion image.
+	 *
+	 * @param w Width in pixels of the bounding box.
+	 * @param h Height in pixels of the bounding box.
+	 *
+	 * @return true If it passes minimum requirements in height and aspect ratio.
+	 */
+	static bool isPossibleStanchion(const std::vector<cv::Point>& polygon,
+					cv::Rect& br) {
+	    br = cv::boundingRect(polygon);
+	    int w = br.width;
+	    int h = br.height;
+	    int hw = ((h * 100) / w);
+	    int pts = polygon.size();
+
+	    return (w > 5) && (h > 15) && (hw > 50) && (hw < 300)
+		&& (pts > 3) && (pts < 10);
+	}
+
         /**
          * Method allows you to disable the fall back to red filter
          * (only useful when debugging yellow search algorithms).
@@ -45,8 +65,15 @@ namespace vision {
          * @param baseName The base name to use for each file name (if
          * you don't include path information, files will be created
          * in the current directory).
+	 *
+	 * @param orig Reference to original image that was processed
+	 * by the filter.
+	 *
+	 * @param Pass true if you want to write out the original as
+	 * well as all the parts.
          */
-        void writeImages(const std::string& baseName) const;
+        void writeImages(const std::string& baseName, const cv::Mat& orig,
+			 bool writeOrig = true) const;
 
         /** Get color transformed (XYZ, HSV, or whatever color space we switch to). */
         const cv::Mat& getColorTransformed() const { return _colorTransformed; }
@@ -77,10 +104,14 @@ namespace vision {
         void loadConfig();
         Found filterColorRange(const int* ranges, Found colorToFind);
 
+	cv::Mat _cropped;
         cv::Mat _colorTransformed;
         cv::Mat _colorReduced;
         cv::Mat _grayScale;
         cv::Mat _bw;
+
+	// Contours found (if any)
+	std::vector<std::vector<cv::Point>> _contours;
 
         // Color reduction levels (min0, max0, min1, max1, min2, max2)
         int _yelRanges[6];

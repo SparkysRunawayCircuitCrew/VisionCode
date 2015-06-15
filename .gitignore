@@ -27,8 +27,14 @@ output/*
 *.a
 *.lib
 
-*-xyz.jpg
-*-xyz-reduced.jpg
-*-hsv.jpg
-*-hsv-reduced.jpg
-*-bw.jpg
+*-bw.png
+*-cropped.png
+*-hsv.png
+*-hsv-reduced.png
+*-contours.png
+*-contours-possible.png
+*-polygons.png
+*-red.png
+*-xyz.png
+*-xyz-reduced.png
+*-yellow.png
