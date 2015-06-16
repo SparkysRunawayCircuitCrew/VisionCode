@@ -27,14 +27,5 @@ output/*
 *.a
 *.lib
 
-*-bw.png
-*-cropped.png
-*-hsv.png
-*-hsv-reduced.png
-*-contours.png
-*-contours-possible.png
-*-polygons.png
-*-red.png
-*-xyz.png
-*-xyz-reduced.png
-*-yellow.png
+# Temporary output files from avc-vision file processing
+*-step??-*.png

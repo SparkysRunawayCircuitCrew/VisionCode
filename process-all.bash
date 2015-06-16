@@ -14,7 +14,15 @@ is_output_file() {
   if [ "${f//-/}" == "${f}" ]; then
     return 1;
   fi
-  for e in "-bw" "-contours" "-cropped" "-hsv" "-orig.png" "-polygons" \
+
+  # If it has -step somewhere in the name, assume it is an output file
+  if [ "${f//-step/}" != "${f}" ]; then
+    return 0;
+  fi
+
+  # Specific name checks
+  for e in "-blurred" "-bw" "-contours" "-cropped" "-dialate" "-erode" \
+           "-hsv" "-orig.png" "-polygons" \
            "-red.png" "-yellow.png"; do
     if [ "${f//${e}/}" != "${f}" ]; then
       # File name contained one of the common output names, consider as output file
@@ -25,7 +33,7 @@ is_output_file() {
   return 1;
 }
 
-for f in $(find ${topDir} -name "*.png"); do
+for f in $(find ${topDir} -name "*.png" | sort); do
   if is_output_file "${f}"; then
     continue;
   fi

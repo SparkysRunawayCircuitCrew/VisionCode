@@ -23,11 +23,29 @@ Filter::Filter() :
     _colorReduced(),
     _grayScale(),
     _bw(),
+    _dilated(),
+    _dilationElem(),
+    _eroded(),
+    _erosionElem(),
+    _polyEpsilon(8),
     _redEnabled(true),
     _yellowEnabled(true)
 {
     memset(&_fileData, 0, sizeof(_fileData));
     loadConfig();
+
+    // Initialize a erosion block for eroding black and with image
+    int eDim = 5;
+    Point ePoint(eDim / 2, eDim / 2);
+    Size eSize(eDim, eDim);
+    _erosionElem = getStructuringElement(MORPH_RECT, eSize, ePoint);
+
+    // Initialize a slightly larger to "glue" holes created in object back
+    // together
+    int dDim = eDim + 2;
+    Point dPoint(dDim / 2, dDim / 2);
+    Size dSize(dDim, dDim);
+    _dilationElem = getStructuringElement(MORPH_RECT, dSize, dPoint);
 }
 
 // ---------------------------------------------------------------------
@@ -67,11 +85,23 @@ Found Filter::filter(const Mat& src) {
     _fileData.boxWidth = _fileData.boxHeight = 0;
     _fileData.xMid = _fileData.yBot = 0;
 
-    // Crop the image
-    _cropped = src(cv::Rect(0, 50, src.cols, src.rows - 50));
+    // Crop the image (need to adjust this if we move/tilt camera)
+    _cropped = src(cv::Rect(0, 60, src.cols, src.rows - 60));
 
-    // Convert to XYZ color space
-    cvtColor(_cropped, _colorTransformed, cv::COLOR_BGR2HSV);
+    // This could be a command line option
+    bool enableBlur = false;
+
+    if (enableBlur) {
+	// Apply blur to smear colors together better (this adds a
+	// HUGE! impact to FPS)
+	blur(_cropped, _blurred, Size(3, 3));
+
+	// Convert to HSV color space
+	cvtColor(_blurred, _colorTransformed, cv::COLOR_BGR2HSV);
+    } else {
+	// Convert to HSV color space
+	cvtColor(_cropped, _colorTransformed, cv::COLOR_BGR2HSV);
+    }
 
     // Try looking for yellow stanchion first
     Found found = _yellowEnabled ? filterColorRange(_yelRanges, Found::Yellow) : Found::None;
@@ -98,31 +128,33 @@ void Filter::writeImages(const string& baseName, const Mat& orig, bool writeOrig
     _cropped.copyTo(polygonImg);
     _cropped.copyTo(foundImg);
 
-    Scalar contourColor(255, 255, 0);
-    Scalar polygonLabelColor(255, 128, 200);
+    Scalar goodColor(255, 255, 0);
+    Scalar badColor(100, 200, 255);
+    Scalar labelColor(255, 128, 200);
 
     int n = _contours.size();
     for (int i = 0; i < n; i++) {
-	drawContours(contoursImg, _contours, i, contourColor, 1);
-
 	vector<Point> polygon;
 	Rect br;
-        approxPolyDP(Mat(_contours[i]), polygon, 6, true);
+        approxPolyDP(Mat(_contours[i]), polygon, _polyEpsilon, true);
+	const Scalar* shapeColor = &badColor;
 
-	if (isPossibleStanchion(polygon, br)) {
-	    drawContours(possibleImg, _contours, i, contourColor, 1);
-
-	    //	    polylines(polygonImg, polygon, false, contourColor, 1);
-	    const cv::Point* pts = (const cv::Point*) Mat(polygon).data;
-	    int npts = Mat(polygon).rows;
-	    polylines(polygonImg, &pts, &npts, 1, true, contourColor, 3);
-
-	    char buf[100];
-	    snprintf(buf, sizeof(buf), "%d", polygon.size());
-	    Point textPt(br.x + br.width / 2 - 8, br.y + (br.height / 2) - 5);
-	    putText(polygonImg, buf, textPt, FONT_HERSHEY_PLAIN,
-		    0.75, polygonLabelColor);
+	if (isPossibleStanchion(contoursImg, polygon, br)) {
+	    shapeColor = &goodColor;
+	    drawContours(possibleImg, _contours, i, *shapeColor, 1);
 	}
+
+	drawContours(contoursImg, _contours, i, *shapeColor, 1);
+
+	const cv::Point* pts = (const cv::Point*) Mat(polygon).data;
+	int npts = Mat(polygon).rows;
+	polylines(polygonImg, &pts, &npts, 1, true, *shapeColor, 3);
+
+	char buf[100];
+	snprintf(buf, sizeof(buf), "%d", polygon.size());
+	Point textPt(br.x + br.width / 2 - 8, br.y + (br.height / 2) - 5);
+	putText(polygonImg, buf, textPt, FONT_HERSHEY_PLAIN,
+		0.75, labelColor);
     }
 
     string foundExt;
@@ -149,7 +181,7 @@ void Filter::writeImages(const string& baseName, const Mat& orig, bool writeOrig
 	int ih = foundImg.rows;
 
 	Rect br(x, y, w, h);
-	rectangle(foundImg, br, contourColor, 3);
+	rectangle(foundImg, br, goodColor, 3);
 	
 	int fontSpacing = 15;
 	int topText = y - 4;
@@ -166,31 +198,91 @@ void Filter::writeImages(const string& baseName, const Mat& orig, bool writeOrig
 		 w, h, x, y, cx, cy, rx, by);
 
 	putText(foundImg, buf, Point(4, textY), FONT_HERSHEY_PLAIN,
-		0.75, contourColor);
+		0.75, labelColor);
     }
 
+    // NOTE: Keep two arrays in sync and ordered by steps done
     const string names[] = {
-	(writeOrig ? "-orig.png" : ""), "-cropped.png",
-	"-hsv.png", "-hsv-reduced.png", "-bw.png",
-	"-contours.png", "-contours-possible.png", "-polygons.png",
+	(writeOrig ? "-orig.png" : ""),
+	"-cropped.png",
+	"-blurred.png",
+	"-hsv.png",
+	"-hsv-reduced.png",
+	"-bw.png",
+	"-eroded.png",
+	"-dilated.png",
+	"-contours.png",
+	"-contours-possible.png",
+	"-polygons.png",
 	foundExt
     };
     const Mat* images[] = {
-	&orig, &_cropped, &_colorTransformed, &_colorReduced, &_bw,
-	&contoursImg, &possibleImg, &polygonImg,
+	&orig,
+	&_cropped,
+	&_blurred,
+	&_colorTransformed,
+	&_colorReduced,
+	&_bw,
+	&_eroded,
+	&_dilated,
+	&contoursImg,
+	&possibleImg,
+	&polygonImg,
 	&foundImg
     };
 
     n = sizeof(names) / sizeof(names[0]);
 
     for (int i = 0; i < n; i++) {
-	if ((names[i].size() != 0) && (images[i] != 0)) {
-	    string fn(baseName);
-	    fn += names[i];
-	    imwrite(fn, *images[i]);
+	if ((names[i].size() != 0) && (images[i] != 0) && (images[i]->rows > 0)) {
+	    ostringstream fn;
+	    fn << baseName << "-step" << setw(2) << setfill('0') << i << names[i];
+	    imwrite(fn.str(), *images[i]);
 	}
     }
 
+}
+
+// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+
+bool Filter::isPossibleStanchion(const cv::Mat& img,
+				 const std::vector<cv::Point>& polygon,
+				 cv::Rect& br) {
+    br = cv::boundingRect(polygon);
+    int w = br.width;
+    int h = br.height;
+    int hw = ((h * 100) / w);
+    int pts = polygon.size();
+    // Distance of top of bounding rectangle from top of screen must
+    // be more than distance of bottom of bounding rectange from middle
+    // (or bottom must be below middle)
+    int imgMid = img.rows / 2;
+    int distFromTop = br.y; // smallest can be is 0
+    int distFromMid = (img.rows / 2) - (br.y + h);  // goes negative if below mid
+
+    // Also, top can not be below middle of image
+
+    // We don't like short fat stanchions, but allow them to be fairly
+    // skinny (for the case when it is just showin up on the edge)
+    bool couldBeStanchion = (w > 5) && (h > 15) && (hw > 50) && (hw < 800)
+	&& (pts >= 4) && (pts < 20) &&
+	(distFromTop > distFromMid) && (distFromTop < imgMid);
+
+    // Set to true to get temporary diagnostic output
+    if (false) {
+	cerr << "isPossibleStanchion() results:\n"
+	     << "found: " << couldBeStanchion
+	     << "  w: " << w
+	     << "  h: " << h
+	     << "  hw: " << hw
+	     << "  pts: " << pts
+	     << "  distFromTop: " << distFromTop
+	     << "  distFromMid: " << distFromMid
+	     << "\n";
+    }
+
+    return couldBeStanchion;
 }
 
 // ---------------------------------------------------------------------
@@ -203,13 +295,28 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
     // Filter each color channel for specified ranges
     inRange(_colorTransformed, lower, upper, _colorReduced);
 
+    // NASTY HACK! Red Hue values wrap around 255 (we want Hue values from 0-10
+    // and from something like 160-255).
+    if (colorToFind == Found::Red) {
+	Scalar lower(0, ranges[2], ranges[4]);
+	Scalar upper(10, ranges[3], ranges[5]);
+	inRange(_colorTransformed, lower, upper, _redLower);
+	bitwise_or(_redLower, _colorReduced, _colorReduced);
+    }
+
     // Take it down to black and white
-    threshold(_colorReduced, _bw, 127, 255, THRESH_BINARY);
+    threshold(_colorReduced, _bw, 32, 255, THRESH_BINARY);
+
+    // Erode the image to clean up little bits of noise
+    erode(_bw, _eroded, _erosionElem);
+
+    // Dilate the image to try and fuse small holes
+    dilate(_eroded, _dilated, _dilationElem);
 
     // Now go look for stanchion in black and white image
     vector<Vec4i> hierarchy;
 
-    cv::Mat bwClone = _bw.clone();
+    cv::Mat bwClone = _dilated.clone();
     findContours(bwClone, _contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     int n = _contours.size();
@@ -219,9 +326,9 @@ Found Filter::filterColorRange(const int* ranges, Found colorToFind) {
         vector<Point> polygon;
         Rect br;
 
-        approxPolyDP(Mat(_contours[i]), polygon, 6, true);
+        approxPolyDP(Mat(_contours[i]), polygon, _polyEpsilon, true);
 
-        if (isPossibleStanchion(polygon, br) && (br.height > maxH)) {
+        if (isPossibleStanchion(_cropped, polygon, br) && (br.height > maxH)) {
 	    int h = br.height;
 	    int w = br.width;
             maxH = h;

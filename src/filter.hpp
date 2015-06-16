@@ -36,22 +36,18 @@ namespace vision {
 	/**
 	 * Checks a polygon bounding box to see if it could be a stanchion image.
 	 *
-	 * @param w Width in pixels of the bounding box.
-	 * @param h Height in pixels of the bounding box.
+	 * @param img Reference to image (to get dimensions from)
+	 *
+	 * @param polygon Points making up polygon that was found.
+	 *
+	 * @param br Reference to where we should store the bounding
+	 * rectangle for the polygon.
 	 *
 	 * @return true If it passes minimum requirements in height and aspect ratio.
 	 */
-	static bool isPossibleStanchion(const std::vector<cv::Point>& polygon,
-					cv::Rect& br) {
-	    br = cv::boundingRect(polygon);
-	    int w = br.width;
-	    int h = br.height;
-	    int hw = ((h * 100) / w);
-	    int pts = polygon.size();
-
-	    return (w > 5) && (h > 15) && (hw > 50) && (hw < 300)
-		&& (pts > 3) && (pts < 10);
-	}
+	static bool isPossibleStanchion(const cv::Mat& img,
+					const std::vector<cv::Point>& polygon,
+					cv::Rect& br);
 
         /**
          * Method allows you to enable or disable the search for the red target.
@@ -109,13 +105,22 @@ namespace vision {
         Found filterColorRange(const int* ranges, Found colorToFind);
 
 	cv::Mat _cropped;
+	cv::Mat _blurred;
         cv::Mat _colorTransformed;
         cv::Mat _colorReduced;
+	cv::Mat _redLower;
         cv::Mat _grayScale;
         cv::Mat _bw;
+	cv::Mat _dilated;
+	cv::Mat _dilationElem;
+	cv::Mat _eroded;
+	cv::Mat _erosionElem;
 
 	// Contours found (if any)
 	std::vector<std::vector<cv::Point>> _contours;
+
+	// How much we can straighten out contours when making polygons
+	int _polyEpsilon;
 
         // Color reduction levels (min0, max0, min1, max1, min2, max2)
         int _yelRanges[6];

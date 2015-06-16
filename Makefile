@@ -61,17 +61,7 @@ else
 endif
 
 cleanImages:
-	@rm -f \
-	  $$(find . -name "*-bw.png") \
-	  $$(find . -name "*-contours.png") \
-	  $$(find . -name "*-contours-possible.png") \
-	  $$(find . -name "*-cropped.png") \
-	  $$(find . -name "*-hsv.png") \
-	  $$(find . -name "*-hsv-reduced.png") \
-	  $$(find . -name "*-orig.png") \
-	  $$(find . -name "*-polygons.png") \
-	  $$(find . -name "*-red.png") \
-	  $$(find . -name "*-yellow.png")
+	@rm -f $$(find . -name "*-step??-*.png");
 
 clean : cleanImages
 	@rm -fr obj/* $(shell find . -name $(OUTPUT)*)
