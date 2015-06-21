@@ -99,7 +99,7 @@ void writeData(std::ofstream& file, int frameCount, Found found, cv::Rect& bound
     file.flush();
 }
 
-int mainOrig(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     cv::Mat colorShift, redRange, yellowRange;
 
     Camera cam;
@@ -151,12 +151,10 @@ int mainOrig(int argc, char* argv[]) {
     float totalFPS = 0;
     int frameCount = 0;
 
-    cv::Mat test = cv::imread("webcam-test/red/north/2ftred.png");
-
     while(true) {
         timer.start();
 
-        colorShift = cam.capture({Groups::Color}, true, &test).clone();
+        colorShift = cam.capture({Groups::Color}, true).clone();
 
         redRange = cam.capture({Groups::RedRange}, true, &colorShift).clone();
         cv::Rect redBounding = boundingRect(cam.filteredFrame); 

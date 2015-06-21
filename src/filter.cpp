@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ENABLE_MAIN 1
+#define ENABLE_MAIN 0
 
 using namespace cv;
 using namespace vision;
