@@ -408,11 +408,12 @@ namespace {
 	    inputFile(""),
 	    outputDir("/dev/shm"),
 	    stanchionsFile("/dev/shm/stanchions"),
-	    changeDir("")
+	    changeDir(""),
+	    periodicWrite(0)
 	{
 
 	    int opt;
-	    while ((opt = getopt(argc, argv, "c:f:ho:rvy")) != -1) {
+	    while ((opt = getopt(argc, argv, "c:f:ho:p:rvy")) != -1) {
 		switch (opt) {
 
 		case 'c':
@@ -427,6 +428,14 @@ namespace {
 
 		case 'o':
 		    outputDir = optarg;
+		    break;
+
+		case 'p':
+		    periodicWrite = atoi(optarg);
+		    if (periodicWrite < 1) {
+			cerr << "Periodic count must be more than 0";
+			ok = false;
+		    }
 		    break;
 
 		case 'r':
@@ -476,6 +485,12 @@ namespace {
 "    about the last image processed prior to program termination (only\n"
 "    used in streaming mode).\n"
 "\n"
+"  -p PERIODIC_CNT\n"
+"    If you want to force an image to be logged, you can use this option.\n"
+"    For example, \"-p 100\" would force every 100th image to be saved to\n"
+"    the CHANGE_DIR regardless if there was a change in object detection or\n"
+"    not. NOTE: You MUST also specify the -c CHANGE_DIR option to enable!\n"
+"\n"
 "  -c CHANGE_DIR\n"
 "    This option enables the video streaming mode to save a copy of\n"
 "    the original image just processed each time it finds something\n"
@@ -495,6 +510,16 @@ namespace {
 
 	void writeToChangeDir(const Mat& img, int frame) const {
 	    if (changeDirEnabled) {
+		ostringstream buf;
+		buf << changeDir << "/avc-vision-" << setw(6)
+		    << setfill('0') << frame << ".png";
+		imwrite(buf.str(), img);
+	    }
+	}
+
+	void writePeriodic(const Mat& img, int frame) const {
+	    if (changeDirEnabled &&
+		(periodicWrite > 0) && ((frame % periodicWrite) == 0)) {
 		ostringstream buf;
 		buf << changeDir << "/avc-vision-" << setw(6)
 		    << setfill('0') << frame << ".png";
@@ -528,6 +553,10 @@ namespace {
 
 	// Output for copies of frame images when -c CHANGE_DIR specified
 	string changeDir;
+
+	// How often to write out a image file to the CHANGE_DIR regardless
+	// of whether there was an actual change.
+	int periodicWrite;
 
 	// Stanchions file
 	string stanchionsFile;
@@ -606,6 +635,11 @@ int main(int argc, char* argv[]) {
 	    opts.writeToChangeDir(origFrame, filter.getFileData().frameCount);
 	    filter.printFrameRate(cout, timer.secsElapsed());
 	    foundLast = found;
+	} else {
+	    // No change in detection state, however, go write out image
+	    // if user enabled the periodic feature (-p PERIODIC) and we've
+	    // reached the periodic count
+	    opts.writePeriodic(origFrame, filter.getFileData().frameCount);
 	}
 
 	stanchionsFile.seekp(0);
