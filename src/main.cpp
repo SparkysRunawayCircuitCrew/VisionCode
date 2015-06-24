@@ -1,5 +1,5 @@
 
-//#define USE_GUI_MAIN
+#include "main.h"
 
 #include <iostream>
 #include <fstream>
@@ -102,6 +102,7 @@ void writeData(std::ofstream& file, int frameCount, Found found, cv::Rect& bound
 }
 
 #ifdef USE_GUI_MAIN
+
 int main(int argc, char* argv[]) {
     cv::Mat colorShift, redRange, yellowRange;
 
@@ -139,7 +140,7 @@ int main(int argc, char* argv[]) {
     prepareGui(YELLOW_RANGE_WINDOW, &yellowXLow, &yellowXHigh, &yellowYLow, &yellowYHigh, &yellowZLow, &yellowZHigh);
 
     cam.addFilter(Groups::Color, [](cv::Mat& src) { 
-        cv::cvtColor(src, src, cv::COLOR_BGR2XYZ);
+        cv::cvtColor(src, src, cv::COLOR_BGR2HSV);
     });
 
     cam.addFilter(Groups::RedRange, [&](cv::Mat& src) {
