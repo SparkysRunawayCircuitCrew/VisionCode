@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ENABLE_MAIN 0
-
 using namespace cv;
 using namespace vision;
 using namespace std;
@@ -537,7 +535,7 @@ namespace {
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
 
-#if ENABLE_MAIN
+#ifndef USE_GUI_MAIN
 
 int main(int argc, char* argv[]) {
     signal(SIGINT, interrupted);

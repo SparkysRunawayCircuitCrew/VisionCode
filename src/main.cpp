@@ -1,4 +1,6 @@
 
+//#define USE_GUI_MAIN
+
 #include <iostream>
 #include <fstream>
 
@@ -99,6 +101,7 @@ void writeData(std::ofstream& file, int frameCount, Found found, cv::Rect& bound
     file.flush();
 }
 
+#ifdef USE_GUI_MAIN
 int main(int argc, char* argv[]) {
     cv::Mat colorShift, redRange, yellowRange;
 
@@ -204,3 +207,5 @@ int main(int argc, char* argv[]) {
               << "\n" << "Average DT: " << (totalDT / frameCount) << "\tAverage FPS: " << (totalFPS / frameCount) << "\n";
     return 0;
 }
+
+#endif
