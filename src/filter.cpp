@@ -86,7 +86,7 @@ Found Filter::filter(const Mat& src) {
     _fileData.xMid = _fileData.yBot = 0;
 
     // Crop the image (need to adjust this if we move/tilt camera)
-    _cropped = src(cv::Rect(0, 60, src.cols, src.rows - 60));
+    _cropped = src(cv::Rect(0, 0, src.cols, src.rows - 60));
 
     // This could be a command line option
     bool enableBlur = false;
