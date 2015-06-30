@@ -607,9 +607,21 @@ int main(int argc, char* argv[]) {
 
     // Video processing
     VideoCapture videoFeed(0);
-    if (!videoFeed.isOpened()) {
-        cerr << "Failed to open camera\n";
-        return 1;
+    {
+	int attempts = 0;
+	while (!videoFeed.isOpened()) {
+	    float waitSecs = 3;
+	    attempts++;
+	    cerr << "Failed to open camera on attempt " << attempts
+		 << ", trying again in "
+		 << waitSecs << " seconds.\n";
+	    avc::Timer::sleep(waitSecs);
+	    if (isInterrupted) {
+		return 1;
+	    }
+	    videoFeed.release();
+	    videoFeed.open(0);
+	}
     }
 
     videoFeed.set(CV_CAP_PROP_FRAME_WIDTH, 320);
