@@ -86,7 +86,7 @@ Found Filter::filter(const Mat& src) {
     _fileData.xMid = _fileData.yBot = 0;
 
     // Crop the image (need to adjust this if we move/tilt camera)
-    _cropped = src(cv::Rect(0, 10, src.cols, src.rows - 50));
+    _cropped = src(cv::Rect(50, 10, src.cols - 50, src.rows - 50));
 
     // This could be a command line option
     bool enableBlur = false;
@@ -263,11 +263,15 @@ bool Filter::isPossibleStanchion(const cv::Mat& img,
 
     // Also, top can not be below middle of image
 
+	// Let's check to make sure the stanchion is in the center
+	int distFromCenter = abs((img.cols / 2) - (br.x + w));
+
     // We don't like short fat stanchions, but allow them to be fairly
     // skinny (for the case when it is just showin up on the edge)
-    bool couldBeStanchion = (w > 5) && (h > 15) && (hw > 50) && (hw < 800)
-	&& (pts >= 4) && (pts < 20) &&
-	(distFromTop > distFromMid) && (distFromTop < imgMid);
+    bool couldBeStanchion = (w > 15) && (h > 40) && (hw > 50) && (hw < 800)
+	&& (pts >= 4) && (pts < 20) 
+	&& (distFromTop > distFromMid) && (distFromTop < imgMid)
+	&& (distFromCenter < 50);
 
     // Set to true to get temporary diagnostic output
     if (false) {
@@ -617,7 +621,7 @@ int main(int argc, char* argv[]) {
 		 << waitSecs << " seconds.\n";
 	    avc::Timer::sleep(waitSecs);
 	    if (isInterrupted) {
-		return 1;
+			return 1;
 	    }
 	    videoFeed.release();
 	    videoFeed.open(0);
